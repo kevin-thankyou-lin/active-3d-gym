@@ -7,6 +7,7 @@ import os
 from PIL import Image
 import shutil
 from typing import Literal
+import imageio
 
 from blenderproc.python.camera.CameraUtility import get_intrinsics_as_K_matrix
 
@@ -67,10 +68,9 @@ class Args:
     #############################
     view_planner: ViewPlanner = None
     shapenet_path: str = ""  # Path to the downloaded shape net core v2 dataset, get it from http://www.shapenet.org/
-    offline_gym_data_dir: str = (
-        "offline_gym_data"  # TODO KL update Path to where the final files will be saved
-    )
+    offline_gym_data_dir: str = "../active-nerf/offline_gym_data"  # TODO KL update Path to where the final files will be saved
     save_data_type: Literal["train", "eval"] = "eval"
+    convert_background_to_white: bool = False
     obj: Literal[
         "Airplane",
         "Bag",
@@ -290,19 +290,31 @@ def main(args):
     for i in range(len(openGL_cam_positions)):
         rgb = np.array(data["colors"][i])  # [..., :3] # remove alpha channel
         depth = np.array(data["depth"][i])
-        depth[depth == 1e10] = 0
+        distance = bproc.postprocessing.depth2dist(depth).astype(np.float32)
+
+        if args.convert_background_to_white:
+            rgb[depth > 1e8] = 255
+
+        depth[depth > 1e8] = 0
+        distance[distance > 1e8] = 0
 
         rgb_png = Image.fromarray(rgb)
         rgb_path = f"images/im_{i}.png"
         rgb_png.save(os.path.join(offline_gym_obj_dir, rgb_path))
 
-        depth_png = Image.fromarray((depth * 255).astype(np.uint8))
-        depth_path = f"images/im_{i}_depth.png"
-        depth_png.save(os.path.join(offline_gym_obj_dir, depth_path))
+        depth_exr = depth
+        depth_path = f"images/im_{i}_depth.exr"
+        imageio.imwrite(os.path.join(offline_gym_obj_dir, depth_path), depth_exr)
+
+        distance_exr = distance
+        distance_path = f"images/im_{i}_distance.exr"
+        imageio.imwrite(os.path.join(offline_gym_obj_dir, distance_path), distance_exr)
 
         transformations_template["frames"].append(
             {
                 "file_path": rgb_path,
+                "depth_path": depth_path,
+                "distance_path": distance_path,
                 "transform_matrix": openGL_cam_positions[i].tolist(),
             }
         )
