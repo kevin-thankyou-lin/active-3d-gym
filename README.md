@@ -1,6 +1,48 @@
 # active-vision-gym
 ActiveVisionGym is a set of benchmark environments for the active view planning problem in robotics.
 
+
+### Usage
+
+First, run `pip install -e .` inside the `active-vision-gym` repo.
+TODO KL add folder dependencies inside setup.py
+
+Then, to use the provided environments in a specific file:
+
+```
+import gym
+import active_vision
+
+env = gym.make("OfflineActiveVision-v0", data_dir=<path/to/data_dir>)
+```
+
+We assume `data_dir`'s folder structure is as follows:
+
+```
+    data_dir/
+        - transforms.json
+        - object_bounds.json # include object bound information?
+        - images/
+            im_0.png
+            im_0_depth.exr
+            im_0_distance.exr
+            im_1.png
+            im_1_depth.exr
+            im_1_distance.exr
+            ...
+```
+
+We have provided sample `data_dir` in a google drive link (TODO)
+
+To generate your own offline dataset, follow the instructions detailed below at `Generating offline data`.
+
+### A note about the depth image data
+
+If a pixel has an invalid depth values or if the depth value is infinity, the depth map (and distance map) value should be set to 0 by convention (TODO link to convention). 
+
+Helpful note from (Blenderproc docs)[https://github.com/DLR-RM/BlenderProc/blob/3f40e88b72f272a1d3159849e651d690521f2aae/docs/tutorials/renderer.md#depth-distance-and-normals]: "While distance and depth images sound similar, they are not the same: In distance images, each pixel contains the actual distance from the camera position to the corresponding point in the scene. In depth images, each pixel contains the distance between the camera and the plane parallel to the camera which the corresponding point lies on."
+
+
 ## Generating offline data
 1. Install [blenderproc](https://github.com/DLR-RM/BlenderProc)
 2. Install dcargs via `blenderproc pip install git+https://github.com/brentyi/dcargs.git`
