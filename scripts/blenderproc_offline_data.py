@@ -330,9 +330,9 @@ def main(args):
             ray_weights = np.ones_like(distance)
             ray_weights[distance == 0] = 0  # do not supervise inf distance rays
             ray_info_dct = {
-                "ray_lengths": ray_lengths_path,
-                "ray_coords": ray_coords_path,
-                "ray_weights": ray_weights_path,
+                "ray_lengths_path": ray_lengths_path,
+                "ray_coords_path": ray_coords_path,
+                "ray_weights_path": ray_weights_path,
             }
 
             np.save(os.path.join(offline_gym_obj_dir, ray_lengths_path), ray_lengths)
