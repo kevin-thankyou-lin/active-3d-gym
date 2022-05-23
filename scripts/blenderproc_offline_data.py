@@ -70,6 +70,7 @@ class Args:
     shapenet_path: str = ""  # Path to the downloaded shape net core v2 dataset, get it from http://www.shapenet.org/
     offline_gym_data_dir: str = "../active-nerf/offline_gym_data"  # TODO KL update Path to where the final files will be saved
     save_data_type: Literal["train", "eval"] = "eval"
+    save_ray_info: bool = False  # Ray info (w.r.t a frame) consists of ray_coord, ray_length and ray weight
     convert_background_to_white: bool = False
     obj: Literal[
         "Airplane",
@@ -310,14 +311,37 @@ def main(args):
         distance_path = f"images/im_{i}_distance.exr"
         imageio.imwrite(os.path.join(offline_gym_obj_dir, distance_path), distance_exr)
 
-        transformations_template["frames"].append(
-            {
-                "file_path": rgb_path,
-                "depth_path": depth_path,
-                "distance_path": distance_path,
-                "transform_matrix": openGL_cam_positions[i].tolist(),
+        transform_dct = {
+            "file_path": rgb_path,
+            "depth_path": depth_path,
+            "distance_path": distance_path,
+            "transform_matrix": openGL_cam_positions[i].tolist(),
+        }
+
+        if args.save_ray_info:
+            ray_lengths_path = f"images/ray_lengths_{i}.npy"
+            ray_coords_path = f"images/ray_coords_{i}.npy"
+            ray_weights_path = f"images/ray_weights_{i}.npy"
+
+            ray_lengths = distance.copy()
+            ray_coords = np.meshgrid(
+                np.arange(distance.shape[0]), np.arange(distance.shape[1])
+            )
+            ray_weights = np.ones_like(distance)
+            ray_weights[distance == 0] = 0  # do not supervise inf distance rays
+            ray_info_dct = {
+                "ray_lengths": ray_lengths_path,
+                "ray_coords": ray_coords_path,
+                "ray_weights": ray_weights_path,
             }
-        )
+
+            np.save(os.path.join(offline_gym_obj_dir, ray_lengths_path), ray_lengths)
+            np.save(os.path.join(offline_gym_obj_dir, ray_coords_path), ray_coords)
+            np.save(os.path.join(offline_gym_obj_dir, ray_weights_path), ray_weights)
+
+            transform_dct.update(ray_info_dct)
+
+        transformations_template["frames"].append(transform_dct)
 
     for data_type in ["train", "val"]:
         with open(f"{offline_gym_obj_dir}/transforms_{data_type}.json", "w") as f:
