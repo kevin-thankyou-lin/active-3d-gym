@@ -51,6 +51,17 @@ Helpful note from (Blenderproc docs)[https://github.com/DLR-RM/BlenderProc/blob/
 ```
 blenderproc run scripts/blenderproc_offline_data.py view-planner.num-cam-positions <num cam positions> --shapenet-path <path/to/ShapenetCoreV2> --candidate-view-radius 0.8 --obj <object>
 ```
+
+Example train / eval data generation script:
+
+```
+blenderproc run scripts/blenderproc_offline_data.py --shapenet-path ../ShapeNetCore.v2/ --view-planner.num-cam-positions 3 --save-data-type eval --convert-background-to-white --save-ray-info
+```
+
+`--save-ray-info`: saves rays for ray distance supervision (c.f. [DS-NeRF](https://github.com/dunbar12138/DSNeRF))
+
+`--convert-background-to-white`: converts (infinite distance) background to RGB color `(255, 255, 255)`
+
 > **_NOTE:_** dcargs replaces underscores with dashes on the command line, and supports nested args (e.g. `view-planner.num-cam-positions`)
 
 The script found in `blenderproc_offline_data.py` creates a directory `<offline gym data dir>/<save data type>/<shapenet object name>`. The folder structure within this directory follows that of [nerf](https://github.com/bmild/nerf), ie.  
