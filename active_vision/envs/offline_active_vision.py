@@ -19,7 +19,7 @@ def get_transforms(data_dir):
 def get_object_bounds(data_dir):
     print(f"get_object_bounds is using heuristic at the moment")
     poi = np.zeros(3)
-    size = 0.2
+    size = 0.75
     return {
         "poi": poi,
         "size": size,
