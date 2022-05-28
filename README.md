@@ -33,7 +33,7 @@ We assume `data_dir`'s folder structure is as follows:
             ...
 ```
 
-`transform_train.json` and `transform_val.json` should file structure compatible with nerf data:
+`transform_train.json` (and, optionally, `transform_val.json`) should have file structure compatible with nerf data, such as:
 
 ```
 {
