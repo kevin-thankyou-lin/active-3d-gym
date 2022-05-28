@@ -20,8 +20,9 @@ We assume `data_dir`'s folder structure is as follows:
 
 ```
     data_dir/
-        - transforms.json
-        - object_bounds.json # include object bound information?
+        - transform_train.json
+        - transform_val.json
+        - object_bounds.json # mightn't be necessary: include object bound information?
         - images/
             im_0.png
             im_0_depth.exr
@@ -30,6 +31,26 @@ We assume `data_dir`'s folder structure is as follows:
             im_1_depth.exr
             im_1_distance.exr
             ...
+```
+
+`transform_train.json` and `transform_val.json` should file structure compatible with nerf data:
+
+```
+{
+    "fl_x": ...,
+    "fl_y": ...,
+    "c_x": ...,
+    "c_y": ...,
+    "aabb_scale": null,
+    "frames": [
+        {
+            "file_path": "train/im_0.png",
+            "depth_path": "train/im_0_depth.exr",
+            "distance_path": "train/im_0_distance.exr",
+            "transform_matrix": [...]
+        }, 
+        ...
+    ]
 ```
 
 We have provided sample `data_dir` in a google drive link (TODO)
