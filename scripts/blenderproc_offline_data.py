@@ -68,11 +68,12 @@ class Args:
     #############################
     view_planner: ViewPlanner = None
     shapenet_path: str = ""  # Path to the downloaded shape net core v2 dataset, get it from http://www.shapenet.org/
+    blender_path: str = ""  # Path to the blender obj
     offline_gym_data_dir: str = "../active-nerf/offline_gym_data"  # TODO KL update Path to where the final files will be saved
-    save_data_type: Literal["train", "eval"] = "eval"
+    save_data_type: Literal["train", "val"] = "val"
     save_ray_info: bool = False  # Ray info (w.r.t a frame) consists of ray_coord, ray_length and ray weight
     convert_background_to_white: bool = False
-    obj: Literal[
+    shapenet_obj: Literal[
         "Airplane",
         "Bag",
         "Car",
@@ -166,7 +167,20 @@ def get_candidate_views(
     return openGL_cam_positions
 
 
-def get_shapenet_obj_bounds(shapenet_obj):
+def get_obj_bounds(shapenet_obj):
+    poi = np.zeros(3)
+    size = 1
+    return {
+        "poi": poi,
+        "size": size,
+        "xmin": poi[0] - 2 * size,
+        "xmax": poi[0] + 2 * size,
+        "ymin": poi[1] - 2 * size,
+        "ymax": poi[1] + 2 * size,
+        "zmin": poi[2] - 2 * size,
+        "zmax": poi[2] + 2 * size,
+    }  # 2 * is rough heuristic
+
     blender_obj = shapenet_obj.blender_obj
     poi = blender_obj.location[:]
     bound_vals = blender_obj.bound_box[:]
@@ -214,12 +228,16 @@ def openGL_to_openCV(cam2world_matrix):
 
 
 def main(args):
-    offline_gym_obj_dir = os.path.join(
-        args.offline_gym_data_dir, args.save_data_type, args.obj
+    obj_name = (
+        args.shapenet_obj
+        if args.shapenet_path != ""
+        else args.blender_path.split("/")[-1].split(".")[0]
     )
-    if os.path.isdir(offline_gym_obj_dir):
-        shutil.rmtree(offline_gym_obj_dir)
-    os.makedirs(offline_gym_obj_dir)
+    offline_gym_obj_dir = os.path.join(args.offline_gym_data_dir, obj_name)
+    # if os.path.isdir(offline_gym_obj_dir):
+    #     shutil.rmtree(offline_gym_obj_dir)
+    if not os.path.isdir(offline_gym_obj_dir):
+        os.makedirs(offline_gym_obj_dir)
 
     bproc.init()
 
@@ -231,14 +249,19 @@ def main(args):
         c_y=intrinsics[1][2],
     )
 
-    # Load the ShapeNet object into the scene
-    shapenet_obj_ids = obj_to_shapenet_ids[args.obj]
-    shapenet_obj = bproc.loader.load_shapenet(
-        args.shapenet_path,
-        used_synset_id=shapenet_obj_ids["used_synset_id"],
-        used_source_id=shapenet_obj_ids["used_source_id"],
-        move_object_origin=False,
-    )
+    if args.shapenet_path != "":
+        # Load the ShapeNet object into the scene
+        shapenet_obj_ids = obj_to_shapenet_ids[args.shapenet_obj]
+        obj = bproc.loader.load_shapenet(
+            args.shapenet_path,
+            used_synset_id=shapenet_obj_ids["used_synset_id"],
+            used_source_id=shapenet_obj_ids["used_source_id"],
+            move_object_origin=False,
+        )
+    elif args.blender_path != "":
+        # Load the Blender object into the scene
+        obj = bproc.loader.load_blend(args.blender_path)
+        obj = bproc.loader.load_blend(args.blender_path)
 
     # Define lights and set location and energy level
     light1 = bproc.types.Light()
@@ -267,7 +290,7 @@ def main(args):
     light5.set_energy(200)
 
     # Calculate the camera poses
-    object_bounds = get_shapenet_obj_bounds(shapenet_obj)
+    object_bounds = get_obj_bounds(obj)
     openGL_cam_positions = get_candidate_views(
         object_bounds,
         args.view_planner.num_cam_positions,
@@ -285,7 +308,7 @@ def main(args):
     bproc.renderer.enable_depth_output(activate_antialiasing=False)
     data = bproc.renderer.render()
 
-    image_dir = f"{offline_gym_obj_dir}/images"
+    image_dir = f"{offline_gym_obj_dir}/{args.save_data_type}"
     os.makedirs(image_dir)  # making directory for each image
 
     for i in range(len(openGL_cam_positions)):
@@ -300,15 +323,15 @@ def main(args):
         distance[distance > 1e8] = 0
 
         rgb_png = Image.fromarray(rgb)
-        rgb_path = f"images/im_{i}.png"
+        rgb_path = f"{args.save_data_type}/im_{i}.png"
         rgb_png.save(os.path.join(offline_gym_obj_dir, rgb_path))
 
         depth_exr = depth
-        depth_path = f"images/im_{i}_depth.exr"
+        depth_path = f"{args.save_data_type}/im_{i}_depth.exr"
         imageio.imwrite(os.path.join(offline_gym_obj_dir, depth_path), depth_exr)
 
         distance_exr = distance
-        distance_path = f"images/im_{i}_distance.exr"
+        distance_path = f"{args.save_data_type}/im_{i}_distance.exr"
         imageio.imwrite(os.path.join(offline_gym_obj_dir, distance_path), distance_exr)
 
         transform_dct = {
@@ -319,10 +342,9 @@ def main(args):
         }
 
         if args.save_ray_info:
-            ray_lengths_path = f"images/ray_lengths_{i}.npy"
-            ray_coords_path = f"images/ray_coords_{i}.npy"
-            ray_weights_path = f"images/ray_weights_{i}.npy"
-
+            ray_lengths_path = f"{args.save_data_type}/ray_lengths_{i}.npy"
+            ray_coords_path = f"{args.save_data_type}/ray_coords_{i}.npy"
+            ray_weights_path = f"{args.save_data_type}/ray_weights_{i}.npy"
             ray_lengths = distance.copy()
             ray_coords = np.meshgrid(
                 np.arange(distance.shape[0]), np.arange(distance.shape[1])
@@ -343,9 +365,8 @@ def main(args):
 
         transformations_template["frames"].append(transform_dct)
 
-    for data_type in ["train", "val"]:
-        with open(f"{offline_gym_obj_dir}/transforms_{data_type}.json", "w") as f:
-            json.dump(transformations_template, f)
+    with open(f"{offline_gym_obj_dir}/transforms_{args.save_data_type}.json", "w") as f:
+        json.dump(transformations_template, f)
 
 
 if __name__ == "__main__":
