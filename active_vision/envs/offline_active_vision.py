@@ -19,7 +19,7 @@ def get_transforms(data_dir):
 def get_object_bounds(data_dir):
     print(f"get_object_bounds is using heuristic at the moment")
     poi = np.zeros(3)
-    size = 0.75
+    size = 1.5
     return {
         "poi": poi,
         "size": size,
@@ -60,7 +60,6 @@ class OfflineActiveVisionEnv(gym.Env):
         self.frames = self.transforms["frames"]
         self.num_views = len(self.frames)
         self.action_space = spaces.Discrete(self.num_views)
-
         dummy_obs = self._get_obs(self.frames[0])
         dummy_img = dummy_obs["img"][..., :3]
         dummy_distance = dummy_obs["distance"]
@@ -95,11 +94,17 @@ class OfflineActiveVisionEnv(gym.Env):
 
     def _get_obs(self, frame):
         rgb_path = os.path.join(self.data_dir, frame["file_path"])
+        if "." not in rgb_path.split("/")[-1]:
+            rgb_path += ".png"
         cam2world_matrix = frame["transform_matrix"]
         img = cv2.imread(rgb_path, cv2.IMREAD_UNCHANGED)  # [H, W, 3] o [H, W, 4]
         float_img = (img / 255).astype(np.float32)
-        distance_path = os.path.join(self.data_dir, frame["distance_path"])
-        distance = imageio.imread(distance_path)
+        if "distance_path" in frame:
+            distance_path = os.path.join(self.data_dir, frame["distance_path"])
+            distance = imageio.imread(distance_path)
+        else:
+            distance = np.ones(1)
+
         return {
             "img": float_img,
             "distance": distance,
@@ -107,6 +112,34 @@ class OfflineActiveVisionEnv(gym.Env):
         }
 
     def _get_info(self):
+        transform = self.transforms
+        if "camera_angle_x" in transform or "camera_angle_y" in transform:
+            self.H = self.observation_space["img"].shape[0]
+            self.W = self.observation_space["img"].shape[1]
+            # blender, assert in radians. already downscaled since we use H/W
+            fl_x = (
+                self.W / (2 * np.tan(transform["camera_angle_x"] / 2))
+                if "camera_angle_x" in transform
+                else None
+            )
+            fl_y = (
+                self.H / (2 * np.tan(transform["camera_angle_y"] / 2))
+                if "camera_angle_y" in transform
+                else None
+            )
+            if fl_x is None:
+                fl_x = fl_y
+            if fl_y is None:
+                fl_y = fl_x
+
+            cx = (transform["cx"] / downscale) if "cx" in transform else (self.H / 2)
+            cy = (transform["cy"] / downscale) if "cy" in transform else (self.W / 2)
+
+            self.transforms["fl_x"] = fl_x
+            self.transforms["fl_y"] = fl_y
+            self.transforms["c_x"] = cx
+            self.transforms["c_y"] = cy
+
         camera_info_dct = {
             "fl_x": self.transforms["fl_x"],
             "fl_y": self.transforms["fl_y"],
