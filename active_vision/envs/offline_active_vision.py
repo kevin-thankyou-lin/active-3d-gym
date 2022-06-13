@@ -1,5 +1,18 @@
 import os
+from typing import (
+    Any,
+    Dict,
+    Generic,
+    List,
+    Optional,
+    SupportsFloat,
+    Tuple,
+    TypeVar,
+    Union,
+)
+
 import json
+
 import numpy as np
 import gym
 from gym import spaces
@@ -53,14 +66,16 @@ class OfflineActiveVisionEnv(gym.Env):
                     im_1_depth.exr
                     im_1_distance.exr
                     ...
+
         """
         self.data_dir = data_dir
         self.transforms = get_transforms(data_dir)
         self.object_bounds = get_object_bounds(data_dir)
-        self.frames = self.transforms["frames"]
-        self.num_views = len(self.frames)
-        self.action_space = spaces.Discrete(self.num_views)
-        dummy_obs = self._get_obs(self.frames[0])
+        self.all_possible_frames = self.transforms["frames"]
+        self.curr_episode_frames = []  # populated within reset()
+        self.num_total_views = len(self.all_possible_frames)
+        self.action_space = spaces.Discrete(self.num_total_views)
+        dummy_obs = self._get_obs(self.all_possible_frames[0])
         dummy_img = dummy_obs["img"][..., :3]
         dummy_distance = dummy_obs["distance"]
         dummy_cam2world_matrix = dummy_obs["cam2world_matrix"]
@@ -85,11 +100,15 @@ class OfflineActiveVisionEnv(gym.Env):
             }
         )
 
-        self.action_space = spaces.Discrete(len(self.frames))
+        self.action_space = spaces.Discrete(len(self.all_possible_frames))
 
         self._action_to_cam2world_matrix = {
-            i: frame["transform_matrix"] for i, frame in enumerate(self.frames)
+            i: frame["transform_matrix"]
+            for i, frame in enumerate(self.all_possible_frames)
         }
+        self._curr_episode_action_to_cam2world_matrix = {}  # populated within reset()
+
+        self.reset_counter = 0
         # dictionary going from integer to pose
 
     def _get_obs(self, frame):
@@ -149,25 +168,64 @@ class OfflineActiveVisionEnv(gym.Env):
             "width": self.observation_space["img"].shape[1],
         }
         return {
-            "action_to_cam2world_matrix": self._action_to_cam2world_matrix,
+            "action_to_cam2world_matrix": self._curr_episode_action_to_cam2world_matrix,
             "camera_info": camera_info_dct,
             "object_bounds": self.object_bounds,  # tODO KL update this
         }
 
+    def _update_action_space(self, actions: List[int]):
+        """Update action_space, curr_episode_frames, _curr_episode_action_to_cam2world_matrix based on the initial 'actions' taken
+        - only used after reset()
+
+        :params:
+            actions: list of integers denoting used actions, each integer is the index of the frame in self.all_possible_frames
+        """
+        self.curr_episode_frames = [
+            frame
+            for idx, frame in enumerate(self.all_possible_frames)
+            if idx not in actions
+        ]
+        self.action_space = spaces.Discrete(len(self.curr_episode_frames))
+        self.curr_episode_action_to_cam2world_matrix = {
+            i: frame["transform_matrix"]
+            for i, frame in enumerate(self.curr_episode_frames)
+        }
+
     def step(self, action: int):
-        frame = self.frames[action]
+        frame = self.curr_episode_frames[action]
         reward = 0
         info = {"duration": 0}
         done = False
         return self._get_obs(frame), reward, done, info
 
-    def reset(self, seed=None, return_info=False, options=None):
+    def reset(self, seed=None, return_info=False, options: Optional[dict] = {}):
+        """
+        :params:
+            options: supports key of "num_init_views" and value of int
+                specifies the number of initial views to be returned by the environment
+                on reset. If not specified, the default is to return one random view.
+        :returns:
+            info, a dict with keys
+                - "init_views"
+                - "action_to_cam2world_matrix"
+                - "camera_info"
+                - "object_bounds"
+
+            obs: dict containing the last observation in the initial sequence of views
+        """
         super().reset(seed=seed)
-        action = self.np_random.integers(0, self.num_views)
-        frame = self.frames[action]
-        obs = self._get_obs(frame)
+        num_init_views = options.get("num_init_views", 1)
+        actions = self.np_random.integers(0, self.num_total_views, size=num_init_views)
+        print(
+            f"[INFO] init_view actions: {actions}: these actions will be removed from the action space"
+        )
+        frames = np.array(self.all_possible_frames)[np.array(actions)]
+        self._update_action_space(actions)
+
+        obs_lst = [self._get_obs(frame) for frame in frames]
         info = self._get_info()
+        info["init_views"] = obs_lst
         if return_info:
-            return obs, info
+            return obs_lst[-1], info
         else:
-            return obs
+            return obs_lst[-1]
