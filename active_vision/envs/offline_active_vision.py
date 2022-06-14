@@ -106,7 +106,7 @@ class OfflineActiveVisionEnv(gym.Env):
             i: frame["transform_matrix"]
             for i, frame in enumerate(self.all_possible_frames)
         }
-        self._curr_episode_action_to_cam2world_matrix = {}  # populated within reset()
+        self.curr_episode_action_to_cam2world_matrix = {}  # populated within reset()
 
         self.reset_counter = 0
         # dictionary going from integer to pose
@@ -168,13 +168,13 @@ class OfflineActiveVisionEnv(gym.Env):
             "width": self.observation_space["img"].shape[1],
         }
         return {
-            "action_to_cam2world_matrix": self._curr_episode_action_to_cam2world_matrix,
+            "action_to_cam2world_matrix": self.curr_episode_action_to_cam2world_matrix,
             "camera_info": camera_info_dct,
             "object_bounds": self.object_bounds,  # tODO KL update this
         }
 
     def _update_action_space(self, actions: List[int]):
-        """Update action_space, curr_episode_frames, _curr_episode_action_to_cam2world_matrix based on the initial 'actions' taken
+        """Update action_space, curr_episode_frames, curr_episode_action_to_cam2world_matrix based on the initial 'actions' taken
         - only used after reset()
 
         :params:
