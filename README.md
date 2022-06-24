@@ -1,5 +1,5 @@
-# active-vision-gym
-ActiveVisionGym is a set of benchmark environments for the active view planning problem in robotics.
+# active-3d-gym
+Active3DGym is a set of benchmark environments for the active view planning problem in robotics.
 
 
 ### Usage
