@@ -88,8 +88,8 @@ class OfflineActiveVisionEnv(gym.Env):
                 "distance": spaces.Box(
                     low=0,
                     high=1000,
-                    shape=dummy_distance.shape,
-                    dtype=dummy_distance.dtype,
+                    shape=dummy_distance.shape if dummy_distance is not None else (0,),
+                    dtype=dummy_distance.dtype if dummy_distance is not None else np.float32,
                 ),
                 "cam2world_matrix": spaces.Box(
                     low=-1,
@@ -122,7 +122,7 @@ class OfflineActiveVisionEnv(gym.Env):
             distance_path = os.path.join(self.data_dir, frame["distance_path"])
             distance = imageio.imread(distance_path)
         else:
-            distance = np.ones(1)
+            distance = None
 
         return {
             "img": float_img,
