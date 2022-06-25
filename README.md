@@ -1,19 +1,19 @@
-# active-vision-gym
-ActiveVisionGym is a set of benchmark environments for the active view planning problem in robotics.
+# active-3d-gym
+Active3DGym is a set of benchmark environments for the active view planning problem in robotics.
 
 
 ### Usage
 
-First, run `pip install -e .` inside the `active-vision-gym` repo.
+First, run `pip install -e .` inside the `active-3d-gym` repo.
 TODO KL add folder dependencies inside setup.py
 
 Then, to use the provided environments in a specific file:
 
 ```
 import gym
-import active_vision
+import active_3d
 
-env = gym.make("OfflineActiveVision-v0", data_dir=<path/to/data_dir>)
+env = gym.make("OfflineActive3D-v0", data_dir=<path/to/data_dir>)
 ```
 
 We assume `data_dir`'s folder structure is as follows:
