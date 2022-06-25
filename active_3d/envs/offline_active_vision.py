@@ -50,7 +50,7 @@ def get_object_bounds(data_dir):
     return object_bounds
 
 
-class OfflineActiveVisionEnv(gym.Env):
+class OfflineActive3DEnv(gym.Env):
     def __init__(self, data_dir: str):
         """
         :params:
