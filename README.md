@@ -4,8 +4,11 @@ Active3DGym is a set of benchmark environments for the active view planning prob
 
 ### Usage
 
-First, run `pip install -e .` inside the `active-3d-gym` repo.
-TODO KL add folder dependencies inside setup.py
+```
+git clone https://github.com/kevin-thankyou-lin/active-3d-gym
+cd active-3d-gym
+pip install -e .
+```
 
 Then, to use the provided environments in a specific file:
 
@@ -53,15 +56,13 @@ We assume `data_dir`'s folder structure is as follows:
     ]
 ```
 
-We have provided sample `data_dir` in a google drive link (TODO)
-
 To generate your own offline dataset, follow the instructions detailed below at `Generating offline data`.
 
 ### A note about the depth image data
 
-If a pixel has an invalid depth values or if the depth value is infinity, the depth map (and distance map) value should be set to 0 by convention (TODO link to convention). 
+If a pixel has an invalid depth values or if the depth value is infinity, the depth map (and distance map) value should be set to 0 as convention. 
 
-Helpful note from (Blenderproc docs)[https://github.com/DLR-RM/BlenderProc/blob/3f40e88b72f272a1d3159849e651d690521f2aae/docs/tutorials/renderer.md#depth-distance-and-normals]: "While distance and depth images sound similar, they are not the same: In distance images, each pixel contains the actual distance from the camera position to the corresponding point in the scene. In depth images, each pixel contains the distance between the camera and the plane parallel to the camera which the corresponding point lies on."
+Helpful note from [Blenderproc docs](https://github.com/DLR-RM/BlenderProc/blob/3f40e88b72f272a1d3159849e651d690521f2aae/docs/tutorials/renderer.md#depth-distance-and-normals): "While distance and depth images sound similar, they are not the same: In distance images, each pixel contains the actual distance from the camera position to the corresponding point in the scene. In depth images, each pixel contains the distance between the camera and the plane parallel to the camera which the corresponding point lies on."
 
 
 ## Generating offline data
