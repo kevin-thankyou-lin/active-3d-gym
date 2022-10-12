@@ -1,1 +1,1 @@
-from active_3d.envs.offline_active_3d import OfflineActive3DEnv
+from active_3d.envs.offline_active_vision import OfflineActive3DEnv

@@ -83,7 +83,7 @@ class Args:
         "Motorbike",
         "Skateboard",
         "Camera",
-    ] = "Camera"
+    ] = "Airplane"
 
 
 ##################### active nerf utils ###############################
